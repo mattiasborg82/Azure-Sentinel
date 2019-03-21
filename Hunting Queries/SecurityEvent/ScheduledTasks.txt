@@ -1,0 +1,25 @@
+//Sec-Labs Hunting for Scheduled Tasks changes
+//Created by Mattias Borg
+//Twitter @mattiasborg82
+//www.sec-labs.com
+//
+// EventID 4698 = Created
+// EventID 4700 = Enabled
+// EventID 4701 = Disabled
+// EventID 4702 = Modified/Updated
+//
+// Requires changes in windows auditing
+// validate object access auditing
+// auditpol.exe /get /category:*
+// Guidelines for object access auditing http://blog.sec-labs.com/2019/03/audit-scheduled-tasks-using-azure-sentinel/
+//
+//Happy Hunting
+let start=datetime("2019-03-20T07:48:42.885Z");
+let end=datetime("2019-03-21T07:48:42.885Z");
+SecurityEvent
+|where TimeGenerated > start and TimeGenerated < end
+| where (EventID == "4698") or (EventID == "4700") or (EventID == "4701") or (EventID == "4702")
+| parse EventData with * '"SubjectUserName">' SubjectUserName '<' * '"SubjectDomainName">' SubjectDomainName '<' * '"TaskName">\\' TaskName '<' * 'Author&gt;' Author '&lt;' * '&lt;Command&gt;' SchedCommand '&lt;/Command' * 'Arguments&gt;' SchedArgs '&lt;/Arguments' * 'WorkingDirectory&gt;' SchedDir '&' *
+| where isnotempty (SchedCommand)
+| project TimeGenerated, EventID, SubjectUserName,Computer,Activity,SubjectDomainName,TaskName,SchedCommand,SchedArgs,SchedDir
+| project-rename CreatedBy = SubjectUserName
